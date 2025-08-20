@@ -17,7 +17,8 @@
     <div class="alert">{{ error }}</div>
     {% endif %}
 
-    <form method="post" class="form">
+    <!-- action과 method 추가 -->
+    <form method="post" action="{{ url_for('login') }}" class="form">
       <label>사용자명</label>
       <div class="input">
         <span class="icon"><i class="fa-solid fa-user"></i></span>
@@ -30,7 +31,9 @@
         <input name="password" type="password" placeholder="비밀번호 입력" required>
       </div>
 
-      <button class="btn"><i class="fa-solid fa-right-to-bracket"></i> 로그인</button>
+      <button class="btn" type="submit">
+        <i class="fa-solid fa-right-to-bracket"></i> 로그인
+      </button>
     </form>
   </div>
 </body>
