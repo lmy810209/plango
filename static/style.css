@@ -1,0 +1,70 @@
+/* 배경 그라데이션 */
+.bg-grad {
+  min-height: 100vh;
+  margin: 0;
+  background: linear-gradient(135deg, #0d4686 0%, #4b88d0 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  color: #1d2837;
+}
+
+.login-card {
+  width: 420px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0,0,0,.15);
+  padding: 36px 32px 28px;
+  text-align: center;
+}
+
+.logo {
+  width: 84px; height: 84px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2b6cb0, #1e3a8a);
+  color: #fff;
+  display: grid; place-items: center;
+  font-size: 36px;
+  margin: 0 auto 16px;
+}
+
+h1 { margin: 8px 0 6px; line-height: 1.25; }
+.sub { color: #607089; margin-bottom: 20px; font-size: 14px; }
+
+.alert {
+  background: #ffe1e1; color: #a30000;
+  padding: 10px 12px; border-radius: 8px; margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.form { text-align: left; }
+.form label { font-size: 14px; color: #334155; display:block; margin: 10px 0 6px; }
+
+.input {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid #cbd5e1; border-radius: 10px;
+  padding: 10px 12px; background: #f8fafc;
+}
+.input input {
+  border: none; outline: none; background: transparent; flex: 1; font-size: 15px;
+}
+.icon { color: #64748b; }
+
+.btn {
+  margin-top: 16px; width: 100%;
+  background: #0f3f7a; color: #fff;
+  padding: 12px 0; border: none; border-radius: 10px;
+  font-size: 16px; cursor: pointer;
+}
+.btn:hover { filter: brightness(1.05); }
+
+/* 대시보드 기본 */
+.page { margin: 0; background: #f5f7fb; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+.topbar{
+  background:#0f3f7a;color:#fff;padding:12px 18px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.topbar .link{color:#fff;text-decoration:none;margin-left:10px;border:1px solid rgba(255,255,255,.4);padding:6px 10px;border-radius:8px;}
+.topbar .user{opacity:.9;margin-right:8px}
+.container{max-width:960px;margin:28px auto;padding:0 16px}
