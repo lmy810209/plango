@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: hmc-landscape-manager
+    env: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DB_PATH
+        value: /var/data/hmc/hmc.db
+    disk:
+      name: hmc-db
+      mountPath: /var/data/hmc
+      sizeGB: 1
