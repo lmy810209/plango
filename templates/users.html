@@ -11,14 +11,8 @@
       <table class="table table-hover mb-0">
         <thead class="table-light">
           <tr>
-            <th>사용자명</th>
-            <th>이름</th>
-            <th>이메일</th>
-            <th>연락처</th>
-            <th>역할</th>
-            <th>가입일</th>
-            <th>상태</th>
-            <th style="width:120px;">작업</th>
+            <th>사용자명</th><th>이름</th><th>이메일</th><th>연락처</th>
+            <th>역할</th><th>가입일</th><th>상태</th><th style="width:120px;">작업</th>
           </tr>
         </thead>
         <tbody>
@@ -28,35 +22,15 @@
             <td>{{ u.name or '-' }}</td>
             <td>{{ u.email or '-' }}</td>
             <td>{{ u.phone or '-' }}</td>
-            <td>
-              {% if u.role == 'admin' %}
-                <span class="badge bg-warning text-dark">관리자</span>
-              {% else %}
-                <span class="badge bg-success">작업자</span>
-              {% endif %}
-            </td>
+            <td>{% if u.role=='admin' %}<span class="badge bg-warning text-dark">관리자</span>{% else %}<span class="badge bg-success">작업자</span>{% endif %}</td>
             <td>{{ u.joined_at or '-' }}</td>
+            <td>{% if u.active==1 %}<span class="badge bg-success">활성</span>{% else %}<span class="badge bg-secondary">비활성</span>{% endif %}</td>
             <td>
-              {% if u.active == 1 %}
-                <span class="badge bg-success">활성</span>
-              {% else %}
-                <span class="badge bg-secondary">비활성</span>
-              {% endif %}
-            </td>
-            <td>
-              <button class="btn btn-sm btn-outline-primary me-1"
-                data-bs-toggle="modal" data-bs-target="#editModal"
-                data-id="{{ u.id }}"
-                data-username="{{ u.username }}"
-                data-email="{{ u.email or '' }}"
-                data-role="{{ u.role }}"
-                data-name="{{ u.name or '' }}"
-                data-phone="{{ u.phone or '' }}"
-                data-active="{{ u.active }}">
-                ✏️
-              </button>
-              <form class="d-inline" method="post" action="{{ url_for('delete_user', user_id=u.id) }}"
-                    onsubmit="return confirm('삭제할까요?');">
+              <button class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#editModal"
+                data-id="{{ u.id }}" data-username="{{ u.username }}" data-email="{{ u.email or '' }}"
+                data-role="{{ u.role }}" data-name="{{ u.name or '' }}" data-phone="{{ u.phone or '' }}"
+                data-active="{{ u.active }}">✏️</button>
+              <form class="d-inline" method="post" action="{{ url_for('delete_user', user_id=u.id) }}" onsubmit="return confirm('삭제할까요?');">
                 <button class="btn btn-sm btn-outline-danger">🗑️</button>
               </form>
             </td>
@@ -72,45 +46,20 @@
 <div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <form class="modal-content" method="post" action="{{ url_for('create_user') }}">
-      <div class="modal-header">
-        <h5 class="modal-title">➕ 사용자 추가</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
+      <div class="modal-header"><h5 class="modal-title">➕ 사용자 추가</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
         <div class="row g-3">
-          <div class="col-6">
-            <label class="form-label">사용자명 *</label>
-            <input name="username" class="form-control" required>
+          <div class="col-6"><label class="form-label">사용자명 *</label><input name="username" class="form-control" required></div>
+          <div class="col-6"><label class="form-label">이메일 *</label><input name="email" type="email" class="form-control" required></div>
+          <div class="col-6"><label class="form-label">비밀번호 *</label><input name="password" type="password" class="form-control" required></div>
+          <div class="col-6"><label class="form-label">역할 *</label>
+            <select name="role" class="form-select" required><option value="worker" selected>작업자</option><option value="admin">관리자</option></select>
           </div>
-          <div class="col-6">
-            <label class="form-label">이메일 *</label>
-            <input name="email" type="email" class="form-control" required>
-          </div>
-          <div class="col-6">
-            <label class="form-label">비밀번호 *</label>
-            <input name="password" type="password" class="form-control" required>
-          </div>
-          <div class="col-6">
-            <label class="form-label">역할 *</label>
-            <select name="role" class="form-select" required>
-              <option value="worker" selected>작업자</option>
-              <option value="admin">관리자</option>
-            </select>
-          </div>
-          <div class="col-6">
-            <label class="form-label">이름</label>
-            <input name="name" class="form-control">
-          </div>
-          <div class="col-6">
-            <label class="form-label">연락처</label>
-            <input name="phone" class="form-control" placeholder="010-0000-0000">
-          </div>
+          <div class="col-6"><label class="form-label">이름</label><input name="name" class="form-control"></div>
+          <div class="col-6"><label class="form-label">연락처</label><input name="phone" class="form-control" placeholder="010-0000-0000"></div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">취소</button>
-        <button class="btn btn-primary" type="submit">저장</button>
-      </div>
+      <div class="modal-footer"><button class="btn btn-secondary" type="button" data-bs-dismiss="modal">취소</button><button class="btn btn-primary" type="submit">저장</button></div>
     </form>
   </div>
 </div>
@@ -119,50 +68,22 @@
 <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <form class="modal-content" method="post">
-      <div class="modal-header">
-        <h5 class="modal-title">✏️ 사용자 수정</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
+      <div class="modal-header"><h5 class="modal-title">✏️ 사용자 수정</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
         <input type="hidden" id="edit-id">
         <div class="row g-3">
-          <div class="col-6">
-            <label class="form-label">사용자명 *</label>
-            <input name="username" id="edit-username" class="form-control" required>
+          <div class="col-6"><label class="form-label">사용자명 *</label><input name="username" id="edit-username" class="form-control" required></div>
+          <div class="col-6"><label class="form-label">이메일 *</label><input name="email" id="edit-email" type="email" class="form-control" required></div>
+          <div class="col-6"><label class="form-label">새 비밀번호 (변경시에만)</label><input name="new_password" id="edit-newpw" type="password" class="form-control"></div>
+          <div class="col-6"><label class="form-label">역할 *</label>
+            <select name="role" id="edit-role" class="form-select" required><option value="worker">작업자</option><option value="admin">관리자</option></select>
           </div>
-          <div class="col-6">
-            <label class="form-label">이메일 *</label>
-            <input name="email" id="edit-email" type="email" class="form-control" required>
-          </div>
-          <div class="col-6">
-            <label class="form-label">새 비밀번호 (변경시에만)</label>
-            <input name="new_password" id="edit-newpw" type="password" class="form-control">
-          </div>
-          <div class="col-6">
-            <label class="form-label">역할 *</label>
-            <select name="role" id="edit-role" class="form-select" required>
-              <option value="worker">작업자</option>
-              <option value="admin">관리자</option>
-            </select>
-          </div>
-          <div class="col-6">
-            <label class="form-label">이름</label>
-            <input name="name" id="edit-name" class="form-control">
-          </div>
-          <div class="col-6">
-            <label class="form-label">연락처</label>
-            <input name="phone" id="edit-phone" class="form-control">
-          </div>
-          <div class="col-12 form-check mt-2">
-            <input class="form-check-input" type="checkbox" id="edit-active" name="active">
-            <label class="form-check-label" for="edit-active">활성 상태</label>
-          </div>
+          <div class="col-6"><label class="form-label">이름</label><input name="name" id="edit-name" class="form-control"></div>
+          <div class="col-6"><label class="form-label">연락처</label><input name="phone" id="edit-phone" class="form-control"></div>
+          <div class="col-12 form-check mt-2"><input class="form-check-input" type="checkbox" id="edit-active" name="active"><label class="form-check-label" for="edit-active">활성 상태</label></div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">취소</button>
-        <button class="btn btn-primary" id="edit-submit" type="submit">수정</button>
-      </div>
+      <div class="modal-footer"><button class="btn btn-secondary" type="button" data-bs-dismiss="modal">취소</button><button class="btn btn-primary" id="edit-submit" type="submit">수정</button></div>
     </form>
   </div>
 </div>
