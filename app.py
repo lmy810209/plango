@@ -1,88 +1,170 @@
-import os
+from flask import Flask, render_template, request, redirect, url_for, session, flash
+import sqlite3
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, session
 
 app = Flask(__name__)
+app.secret_key = "your_secret_key"  # 세션용
 
-# 세션키 (Render > Environment에서 SECRET_KEY 환경변수로 넣어두면 더 안전)
-app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key")
+# ---------------------------
+# DB 연결 함수
+# ---------------------------
+def get_db_connection():
+    conn = sqlite3.connect("users.db")
+    conn.row_factory = sqlite3.Row
+    return conn
 
-# ---- 데모용 계정 (요청하신 값) ----
-USERS = {
-    "lmy8129": {"password": "@@qwer0512", "role": "admin"},   # 관리자
-    "my8129":  {"password": "@@qwer0512", "role": "worker"},  # 작업자
-}
-
-# ---- 로그인/권한 데코레이터 ----
-def login_required(view):
-    @wraps(view)
-    def wrapped(*args, **kwargs):
-        if not session.get("user"):
+# ---------------------------
+# 로그인 필요 데코레이터
+# ---------------------------
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "user_id" not in session:
+            flash("로그인이 필요합니다.")
             return redirect(url_for("login"))
-        return view(*args, **kwargs)
-    return wrapped
+        return f(*args, **kwargs)
+    return decorated_function
 
-def role_required(role):
-    def decorator(view):
-        @wraps(view)
-        def wrapped(*args, **kwargs):
-            user = session.get("user")
-            if not user:
-                return redirect(url_for("login"))
-            if USERS.get(user, {}).get("role") != role:
-                # 권한없음 -> 자신의 대시보드로 보내기
-                return redirect(url_for("dashboard"))
-            return view(*args, **kwargs)
-        return wrapped
-    return decorator
+# ---------------------------
+# 관리자 권한 필요 데코레이터
+# ---------------------------
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "role" not in session or session["role"] != "관리자":
+            flash("관리자 권한이 필요합니다.")
+            return redirect(url_for("index"))
+        return f(*args, **kwargs)
+    return decorated_function
 
-# ---- 라우트 ----
+# ---------------------------
+# 라우트
+# ---------------------------
+
 @app.route("/")
 def index():
-    # 로그인 상태면 역할에 맞게 이동, 아니면 로그인 페이지
-    if session.get("user"):
-        return redirect(url_for("dashboard"))
-    return redirect(url_for("login"))
+    return render_template("index.html")
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    error = None
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "").strip()
+        username = request.form["username"]
+        password = request.form["password"]
 
-        user = USERS.get(username)
-        if user and user["password"] == password:
-            session["user"] = username
-            return redirect(url_for("dashboard"))
+        conn = get_db_connection()
+        user = conn.execute("SELECT * FROM users WHERE username = ? AND password = ?", 
+                            (username, password)).fetchone()
+        conn.close()
+
+        if user:
+            session["user_id"] = user["id"]
+            session["role"] = user["role"]
+            flash("로그인 성공")
+            return redirect(url_for("index"))
         else:
-            error = "아이디 또는 비밀번호가 올바르지 않습니다."
-    return render_template("login.html", error=error)
+            flash("로그인 실패")
+    return render_template("login.html")
 
 @app.route("/logout")
 def logout():
     session.clear()
-    return redirect(url_for("login"))
+    flash("로그아웃 완료")
+    return redirect(url_for("index"))
 
-@app.route("/dashboard")
-@login_required
-def dashboard():
-    user = session.get("user")
-    role = USERS[user]["role"]
-    if role == "admin":
-        return redirect(url_for("admin_page"))
-    return redirect(url_for("worker_page"))
+# ---------------------------
+# 사용자 관리 (관리자 전용)
+# ---------------------------
 
-@app.route("/admin")
-@login_required
-@role_required("admin")
-def admin_page():
-    user = session.get("user")
-    return render_template("admin.html", user=user)
+@app.route("/users")
+@admin_required
+def user_list():
+    conn = get_db_connection()
+    users = conn.execute("SELECT * FROM users").fetchall()
+    conn.close()
+    return render_template("users.html", users=users)
 
-@app.route("/worker")
-@login_required
-@role_required("worker")
-def worker_page():
-    user = session.get("user")
-    return render_template("worker.html", user=user)
+@app.route("/users/add", methods=["GET", "POST"])
+@admin_required
+def user_add():
+    if request.method == "POST":
+        username = request.form["username"]
+        email = request.form["email"]
+        password = request.form["password"]
+        role = request.form["role"]
+        name = request.form["name"]
+        contact = request.form["contact"]
+
+        conn = get_db_connection()
+        conn.execute(
+            "INSERT INTO users (username, email, password, role, name, contact) VALUES (?, ?, ?, ?, ?, ?)",
+            (username, email, password, role, name, contact),
+        )
+        conn.commit()
+        conn.close()
+        flash("사용자 추가 완료")
+        return redirect(url_for("user_list"))
+    return render_template("user_add.html")
+
+@app.route("/users/edit/<int:user_id>", methods=["GET", "POST"])
+@admin_required
+def user_edit(user_id):
+    conn = get_db_connection()
+    user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+
+    if request.method == "POST":
+        email = request.form["email"]
+        password = request.form["password"]
+        role = request.form["role"]
+        name = request.form["name"]
+        contact = request.form["contact"]
+
+        if password:  # 비번 변경 시만 업데이트
+            conn.execute(
+                "UPDATE users SET email=?, password=?, role=?, name=?, contact=? WHERE id=?",
+                (email, password, role, name, contact, user_id),
+            )
+        else:
+            conn.execute(
+                "UPDATE users SET email=?, role=?, name=?, contact=? WHERE id=?",
+                (email, role, name, contact, user_id),
+            )
+
+        conn.commit()
+        conn.close()
+        flash("사용자 수정 완료")
+        return redirect(url_for("user_list"))
+
+    conn.close()
+    return render_template("user_edit.html", user=user)
+
+@app.route("/users/delete/<int:user_id>")
+@admin_required
+def user_delete(user_id):
+    conn = get_db_connection()
+    conn.execute("DELETE FROM users WHERE id=?", (user_id,))
+    conn.commit()
+    conn.close()
+    flash("사용자 삭제 완료")
+    return redirect(url_for("user_list"))
+
+# ---------------------------
+# 앱 실행
+# ---------------------------
+if __name__ == "__main__":
+    # 최초 실행 시 DB 테이블 생성
+    conn = get_db_connection()
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        email TEXT NOT NULL,
+        password TEXT NOT NULL,
+        role TEXT NOT NULL,
+        name TEXT,
+        contact TEXT
+    )
+    """)
+    conn.commit()
+    conn.close()
+
+    app.run(debug=True)
