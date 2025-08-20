@@ -1,21 +1,24 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
-from functools import wraps
-import sqlite3
 import os
+import sqlite3
 from datetime import datetime
+from functools import wraps
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 
 app = Flask(__name__)
-app.secret_key = "change-this-secret"
+app.secret_key = os.environ.get("SECRET_KEY", "change-this-secret")
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "hmc.db")
+# --- DB 경로 (환경변수 DB_PATH가 있으면 그걸 사용: Render 디스크 권장) ---
+default_db_dir = os.path.join(os.path.dirname(__file__), "data")
+os.makedirs(default_db_dir, exist_ok=True)
+DB_PATH = os.environ.get("DB_PATH", os.path.join(default_db_dir, "hmc.db"))
 
-# ---------- DB helpers ----------
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""
@@ -31,7 +34,6 @@ def init_db():
         joined_at TEXT
     )""")
     conn.commit()
-    # seed admin / worker if empty
     cur.execute("SELECT COUNT(*) AS c FROM users")
     if cur.fetchone()["c"] == 0:
         seed = [
@@ -41,33 +43,33 @@ def init_db():
         ]
         for u, p, n, e, ph, r, a in seed:
             cur.execute("""
-                INSERT INTO users (username, password, name, email, phone, role, active, joined_at)
+                INSERT INTO users (username,password,name,email,phone,role,active,joined_at)
                 VALUES (?,?,?,?,?,?,?,?)
             """, (u, p, n, e, ph, r, a, datetime.now().strftime("%Y-%m-%d")))
         conn.commit()
     conn.close()
 
-# ---------- auth decorators ----------
+# --- 인증 데코레이터 ---
 def login_required(f):
     @wraps(f)
-    def _wrap(*args, **kwargs):
+    def _w(*a, **kw):
         if "user_id" not in session:
             return redirect(url_for("login", next=request.path))
-        return f(*args, **kwargs)
-    return _wrap
+        return f(*a, **kw)
+    return _w
 
 def admin_required(f):
     @wraps(f)
-    def _wrap(*args, **kwargs):
+    def _w(*a, **kw):
         if "user_id" not in session:
             return redirect(url_for("login", next=request.path))
         if session.get("role") != "admin":
             flash("관리자만 접근 가능합니다.", "warning")
             return redirect(url_for("dashboard"))
-        return f(*args, **kwargs)
-    return _wrap
+        return f(*a, **kw)
+    return _w
 
-# ---------- routes: auth ----------
+# --- 로그인/로그아웃 ---
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -84,10 +86,9 @@ def login():
             session["name"] = user["name"] or user["username"]
             session["role"] = user["role"]
             flash("로그인되었습니다.", "success")
-            nxt = request.args.get("next") or url_for("dashboard")
-            return redirect(nxt)
+            return redirect(request.args.get("next") or url_for("dashboard"))
         flash("로그인 실패(아이디/비번/비활성 확인).", "danger")
-    return render_template("login.html") if os.path.exists("templates/login.html") else render_template("dashboard.html")
+    return render_template("login.html")
 
 @app.route("/logout")
 def logout():
@@ -95,11 +96,10 @@ def logout():
     flash("로그아웃되었습니다.", "info")
     return redirect(url_for("login"))
 
-# ---------- routes: pages ----------
+# --- 페이지 ---
 @app.route("/")
 @login_required
 def dashboard():
-    # 데모용 카드 숫자
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT COUNT(*) AS c FROM users WHERE role='worker'")
@@ -107,11 +107,9 @@ def dashboard():
     cur.execute("SELECT COUNT(*) AS c FROM users")
     total_users = cur.fetchone()["c"]
     conn.close()
-    return render_template("dashboard.html",
-                           workers=workers,
-                           total_users=total_users)
+    return render_template("dashboard.html", workers=workers, total_users=total_users)
 
-# ---------- routes: Admin ▸ 사용자 관리 ----------
+# --- 관리 ▸ 사용자 관리 ---
 @app.route("/admin/users")
 @admin_required
 def admin_users():
@@ -126,16 +124,13 @@ def admin_users():
 @admin_required
 def create_user():
     f = request.form
-    data = {
-        "username": f.get("username","").strip(),
-        "password": f.get("password","").strip(),
-        "name": f.get("name","").strip() or None,
-        "email": f.get("email","").strip() or None,
-        "phone": f.get("phone","").strip() or None,
-        "role": f.get("role","worker"),
-        "active": 1
-    }
-    if not data["username"] or not data["password"] or not data["email"]:
+    username = f.get("username","").strip()
+    password = f.get("password","").strip()
+    email = f.get("email","").strip()
+    role = f.get("role","worker")
+    name = f.get("name","").strip() or None
+    phone = f.get("phone","").strip() or None
+    if not username or not password or not email:
         flash("사용자명/비밀번호/이메일은 필수입니다.", "warning")
         return redirect(url_for("admin_users"))
     try:
@@ -143,9 +138,8 @@ def create_user():
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO users (username,password,name,email,phone,role,active,joined_at)
-            VALUES (?,?,?,?,?,?,?,?)
-        """, (data["username"], data["password"], data["name"], data["email"], data["phone"],
-              data["role"], data["active"], datetime.now().strftime("%Y-%m-%d")))
+            VALUES (?,?,?,?,?,?,1,?)
+        """, (username, password, name, email, phone, role, datetime.now().strftime("%Y-%m-%d")))
         conn.commit()
         conn.close()
         flash("사용자를 추가했습니다.", "success")
@@ -164,13 +158,11 @@ def update_user(user_id):
     phone = f.get("phone","").strip() or None
     new_pw = f.get("new_password","").strip()
     active = 1 if f.get("active") == "on" else 0
-
-    conn = get_db()
-    cur = conn.cursor()
-    # 사용자명/이메일은 필수
     if not username or not email:
         flash("사용자명/이메일은 필수입니다.", "warning")
         return redirect(url_for("admin_users"))
+    conn = get_db()
+    cur = conn.cursor()
     if new_pw:
         cur.execute("""
             UPDATE users SET username=?, email=?, role=?, name=?, phone=?, active=?, password=?
@@ -189,7 +181,6 @@ def update_user(user_id):
 @app.route("/admin/users/<int:user_id>/delete", methods=["POST"])
 @admin_required
 def delete_user(user_id):
-    # 자기 자신 삭제 방지(선택)
     if session.get("user_id") == user_id:
         flash("본인 계정은 삭제할 수 없습니다.", "warning")
         return redirect(url_for("admin_users"))
@@ -201,7 +192,9 @@ def delete_user(user_id):
     flash("사용자를 삭제했습니다.", "success")
     return redirect(url_for("admin_users"))
 
-# ---------- app start ----------
+# --- 로컬 실행용 (Render에서는 gunicorn이 app:app을 사용) ---
 if __name__ == "__main__":
     init_db()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    port = int(os.environ.get("PORT", "5000"))
+    debug = os.environ.get("FLASK_DEBUG", "0") == "1"
+    app.run(host="0.0.0.0", port=port, debug=debug)
