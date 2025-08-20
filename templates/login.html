@@ -1,40 +1,27 @@
-<!doctype html>
-<html lang="ko">
-<head>
-  <meta charset="utf-8">
-  <title>HMC Landscape Manager - 로그인</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-  <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
-</head>
-<body class="bg-grad">
-  <div class="login-card">
-    <div class="logo"><i class="fa-solid fa-leaf"></i></div>
-    <h1>HMC Landscape<br>Manager</h1>
-    <p class="sub">현대자동차 양재사옥 조경 관리 시스템</p>
-
-    {% if error %}
-    <div class="alert">{{ error }}</div>
-    {% endif %}
-
-    <!-- action과 method 추가 -->
-    <form method="post" action="{{ url_for('login') }}" class="form">
-      <label>사용자명</label>
-      <div class="input">
-        <span class="icon"><i class="fa-solid fa-user"></i></span>
-        <input name="username" placeholder="아이디 입력" required>
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h4 class="mb-3">로그인</h4>
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label">아이디</label>
+            <input name="username" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">비밀번호</label>
+            <input type="password" name="password" class="form-control" required>
+          </div>
+          <button class="btn btn-primary w-100">로그인</button>
+        </form>
+        <div class="small text-muted mt-3">
+          관리자: <code>lmy8129 / @@qwer0512</code><br>
+          작업자: <code>my8129 / @@qwer0512</code>
+        </div>
       </div>
-
-      <label>비밀번호</label>
-      <div class="input">
-        <span class="icon"><i class="fa-solid fa-lock"></i></span>
-        <input name="password" type="password" placeholder="비밀번호 입력" required>
-      </div>
-
-      <button class="btn" type="submit">
-        <i class="fa-solid fa-right-to-bracket"></i> 로그인
-      </button>
-    </form>
+    </div>
   </div>
-</body>
-</html>
+</div>
+{% endblock %}
