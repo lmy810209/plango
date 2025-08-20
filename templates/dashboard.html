@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex align-items-center mb-3">
+  <h3 class="me-2">대시보드</h3>
+  {% if session.get('role')=='admin' %}
+  <span class="badge bg-warning text-dark">관리자</span>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="me-3 fs-2">🌱</div>
+          <div>
+            <div class="text-muted small">등록된 식물</div>
+            <div class="fs-4">1</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="me-3 fs-2">👥</div>
+          <div>
+            <div class="text-muted small">작업자</div>
+            <div class="fs-4">{{ workers }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="me-3 fs-2">🧾</div>
+          <div>
+            <div class="text-muted small">전체 사용자</div>
+            <div class="fs-4">{{ total_users }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
